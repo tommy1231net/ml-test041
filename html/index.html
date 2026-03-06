@@ -1,145 +1,172 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <title>FraudShield AI: Full Variable Simulator</title>
+    <title>ML Demo: NYC Taxi Fare Anomaly Detection</title>
     <meta charset="utf-8">
     <style>
-        body { font-family: 'Consolas', 'Monaco', monospace; margin: 0; background-color: #0d1117; color: #c9d1d9; display: flex; flex-direction: column; height: 100vh; }
-        header { background: #161b22; padding: 15px 30px; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; }
-        .main-layout { display: flex; flex: 1; overflow: hidden; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 2em; background-color: #f0f2f5; color: #333; }
+        .container { max-width: 700px; margin: auto; background: white; padding: 2.5em; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h2 { color: #1a1a1a; border-bottom: 3px solid #fbc02d; padding-bottom: 12px; margin-top: 0; }
+        p { color: #666; font-size: 0.95em; line-height: 1.6; }
+        .section-title { font-size: 1.1em; font-weight: bold; margin: 20px 0 10px; color: #fbc02d; border-left: 4px solid #fbc02d; padding-left: 10px; }
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .input-group { margin-bottom: 15px; }
+        .input-group.full { grid-column: span 2; }
+        label { display: block; margin-bottom: 6px; font-size: 0.85em; font-weight: bold; color: #444; }
+        input, select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        button { margin-top: 25px; padding: 15px; width: 100%; cursor: pointer; background-color: #2f3542; color: white; border: none; border-radius: 6px; font-size: 1.1em; font-weight: bold; transition: background 0.3s; }
+        button:hover { background-color: #fbc02d; color: #2f3542; }
+        #result { margin-top: 25px; padding: 20px; border-radius: 8px; display: none; border: 1px solid #eee; }
         
-        /* Left: Control Panel */
-        .control-panel { width: 60%; padding: 20px; overflow-y: auto; border-right: 1px solid #30363d; }
-        .section-header { color: #58a6ff; font-size: 0.9em; margin: 20px 0 10px; border-bottom: 1px solid #30363d; padding-bottom: 5px; }
+        /* 異常検知ステータスの表示スタイル */
+        .status-box { text-align: center; padding: 15px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; }
+        .status-normal { background: #e8f5e9; border: 2px dashed #4caf50; color: #2e7d32; }
+        .status-anomaly { background: #ffebee; border: 2px dashed #f44336; color: #c62828; animation: pulse 2s infinite; }
         
-        /* Grid for V1-V28 */
-        .v-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        .input-group { background: #161b22; padding: 8px; border-radius: 4px; border: 1px solid #30363d; }
-        label { display: block; font-size: 0.7em; color: #8b949e; margin-bottom: 4px; }
-        input { width: 100%; background: #0d1117; border: 1px solid #30363d; color: #58a6ff; padding: 4px; border-radius: 3px; font-size: 0.9em; }
-        input:focus { border-color: #58a6ff; outline: none; }
-
-        /* Right: Analysis Result */
-        .analysis-panel { width: 40%; padding: 30px; background: #0d1117; display: flex; flex-direction: column; }
-        .status-card { padding: 30px; border-radius: 12px; text-align: center; border: 2px solid #30363d; transition: all 0.5s; }
-        .safe { border-color: #238636; background: rgba(35, 134, 54, 0.1); color: #3fb950; }
-        .fraud { border-color: #f85149; background: rgba(248, 81, 73, 0.1); color: #f85149; box-shadow: 0 0 20px rgba(248, 81, 73, 0.2); }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
         
-        button { background: #238636; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1.1em; margin-top: 20px; transition: 0.2s; }
-        button:hover { background: #2ea043; }
-        
-        .score-display { font-size: 4em; font-weight: bold; margin: 10px 0; }
-        .metadata-log { margin-top: auto; font-size: 0.8em; color: #8b949e; background: #161b22; padding: 15px; border-radius: 6px; }
+        .rec-label { font-size: 1.6em; margin-bottom: 5px; }
+        .detail-table { width: 100%; font-size: 0.85em; border-collapse: collapse; margin-top: 10px; }
+        .detail-table th, .detail-table td { text-align: left; padding: 10px; border-bottom: 1px solid #eee; }
+        .hint { font-size: 0.75em; color: #888; margin-top: 4px; }
     </style>
 </head>
 <body>
+    <div class="container">
+    <h2>🚕 NYC Taxi: Fare Anomaly Detector</h2>
+    <p>
+        <strong>AI-Driven Anomaly Detection: Identifying billing fraud and data irregularities by analyzing deviations between historical taxi patterns and actual transaction values.</strong>
+        <br>
+        <strong>AIによる異常検知：学習したタクシー走行パターンと入力値との乖離を判定し、請求詐欺やデータの不整合があるか特定します。</strong>
+    </p>
 
-<header>
-    <div style="font-size: 1.2em; font-weight: bold; color: #f85149;">🚨 FraudShield AI Simulator</div>
-    <div style="font-size: 0.8em; color: #8b949e;">Endpoint: ml-test041-api...</div>
-</header>
-
-<div class="main-layout">
-    <div class="control-panel">
-        <div class="section-header">BASIC TRANSACTION DATA</div>
-        <div class="v-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="section-title">Trip Details</div>
+        <div class="input-grid">
             <div class="input-group">
-                <label>TIME (Seconds)</label>
-                <input type="number" id="Time" value="406">
+                <label for="actual_total_amount">Actual Fare Paid ($):</label>
+                <input type="number" id="actual_total_amount" step="0.01" value="20.00">
+                <div class="hint">実際に支払った合計金額</div>
             </div>
             <div class="input-group">
-                <label>AMOUNT ($)</label>
-                <input type="number" id="Amount" value="80.00">
+                <label for="trip_distance">Trip Distance (miles):</label>
+                <input type="number" id="trip_distance" step="0.1" value="10">
+                <div class="hint">走行距離を入力</div>
+            </div>
+            <div class="input-group">
+                <label for="pickup_hour">Pickup Hour (0-23):</label>
+                <input type="number" id="pickup_hour" min="0" max="23" value="10">
+            </div>
+            <div class="input-group">
+                <label for="pickup_day">Day of Week (1-7):</label>
+                <select id="pickup_day">
+                    <option value="1">Sunday</option>
+                    <option value="2" selected>Monday</option>
+                    <option value="3">Tuesday</option>
+                    <option value="4">Wednesday</option>
+                    <option value="5">Thursday</option>
+                    <option value="6">Friday</option>
+                    <option value="7">Saturday</option>
+                </select>
             </div>
         </div>
 
-        <div class="section-header">PCA COMPONENTS (V1 - V28)</div>
-        <div class="v-grid" id="v-inputs-container">
+        <div class="section-title">Location & Metadata</div>
+        <div class="input-grid">
+            <div class="input-group">
+                <label for="pickup_location_id">Pickup Zone ID:</label>
+                <input type="number" id="pickup_location_id" value="1">
             </div>
+            <div class="input-group">
+                <label for="dropoff_location_id">Dropoff Zone ID:</label>
+                <input type="number" id="dropoff_location_id" value="5">
+            </div>
+            <div class="input-group">
+                <label for="passenger_count">Passenger Count:</label>
+                <input type="number" id="passenger_count" value="2">
+            </div>
+            <div class="input-group">
+                <label for="rate_code">Rate Code:</label>
+                <select id="rate_code">
+                    <option value="1" selected>Standard Rate</option>
+                    <option value="2">JFK</option>
+                    <option value="3">Newark</option>
+                    <option value="4">Nassau/Westchester</option>
+                    <option value="5">Negotiated Fare</option>
+                </select>
+            </div>
+            <div class="input-group full">
+                <label for="payment_type">Payment Method:</label>
+                <select id="payment_type">
+                    <option value="1" selected>Credit Card</option>
+                    <option value="2">Cash</option>
+                </select>
+            </div>
+        </div>
+
+        <button onclick="predict()">Run Anomaly Analysis</button>
+        <p>
+            <strong>An anomaly is flagged if the absolute difference between the predicted and actual fare is $10 or more, or exceeds 50% of the predicted price.</strong>
+            <br>
+            <strong>予測運賃と実際の運賃の絶対的な差が10ドル以上、または予測価格の50%を超えている場合、異常としてフラグを立てます。</strong>
+        </p>
+        <div id="result"></div>
     </div>
 
-    <div class="analysis-panel">
-        <div id="status-card" class="status-card safe">
-            <div id="status-label" style="font-size: 1.2em;">READY FOR ANALYSIS</div>
-            <div id="score-val" class="score-display">--%</div>
-            <div id="status-desc">Click "Run Inference" to analyze.</div>
-        </div>
-
-        <button onclick="predict()">RUN INFERENCE</button>
-
-        <div class="metadata-log">
-            <strong>System Logs:</strong><br>
-            <div id="log-content">Waiting for request...</div>
-        </div>
-    </div>
-</div>
-
-<script>
-    // Generate V1 - V28 Input Fields
-    const container = document.getElementById('v-inputs-container');
-    for (let i = 1; i <= 28; i++) {
-        const div = document.createElement('div');
-        div.className = 'input-group';
-        div.innerHTML = `
-            <label>V${i}</label>
-            <input type="number" id="V${i}" step="0.0001" value="0.0000">
-        `;
-        container.appendChild(div);
-    }
-
-    // Default values for V1, V2 to show something interesting
-    document.getElementById('V1').value = "-2.31";
-    document.getElementById('V2').value = "1.65";
-
-    async function predict() {
-        const url = "https://ml-test041-api-102654040368.asia-northeast1.run.app/predict";
-        const log = document.getElementById('log-content');
-        const card = document.getElementById('status-card');
-        const scoreVal = document.getElementById('score-val');
-        const statusLabel = document.getElementById('status-label');
-        
-        log.innerText = "Sending request to Cloud Run...";
-
-        // Collect all V-features into an array (V3 to V28)
-        const v_features = [];
-        for (let i = 3; i <= 28; i++) {
-            v_features.push(parseFloat(document.getElementById(`V${i}`).value) || 0);
-        }
-
-        const payload = {
-            Time: parseFloat(document.getElementById('Time').value) || 0,
-            V1: parseFloat(document.getElementById('V1').value) || 0,
-            V2: parseFloat(document.getElementById('V2').value) || 0,
-            V_features: v_features,
-            Amount: parseFloat(document.getElementById('Amount').value) || 0
-        };
-
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            const data = await response.json();
-            const score = data.fraud_score * 100;
+    <script>
+        async function predict() {
+            const resultDiv = document.getElementById('result');
+            const url = "https://ml-test041-api-102654040368.asia-northeast1.run.app/predict";
             
-            scoreVal.innerText = score.toFixed(2) + "%";
-            log.innerText = `Success: ${JSON.stringify(data.metadata)}`;
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "📡 Analyzing transaction via NYC Taxi AI...";
+            
+            const data = {
+                trip_distance: parseFloat(document.getElementById('trip_distance').value) || 0,
+                pickup_hour: parseInt(document.getElementById('pickup_hour').value) || 0,
+                pickup_day: parseInt(document.getElementById('pickup_day').value) || 1,
+                passenger_count: parseInt(document.getElementById('passenger_count').value) || 1,
+                pickup_location_id: parseInt(document.getElementById('pickup_location_id').value) || 1,
+                dropoff_location_id: parseInt(document.getElementById('dropoff_location_id').value) || 1,
+                rate_code: parseInt(document.getElementById('rate_code').value) || 1,
+                payment_type: parseInt(document.getElementById('payment_type').value) || 1,
+                actual_total_amount: parseFloat(document.getElementById('actual_total_amount').value) || 0
+            };
+        
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
 
-            if (data.is_fraud) {
-                card.className = "status-card fraud";
-                statusLabel.innerText = "FRAUD DETECTED";
-            } else {
-                card.className = "status-card safe";
-                statusLabel.innerText = "LEGITIMATE";
+                if (!res.ok) throw new Error(`API Error: ${res.status}`);
+                
+                const result = await res.json();
+
+                const isAnomaly = result.is_anomaly;
+                const statusClass = isAnomaly ? 'status-anomaly' : 'status-normal';
+                
+                let html = `<div class="status-box ${statusClass}">`;
+                html += `<div style="font-size: 0.9em;">Analysis Result:</div>`;
+                html += `<div class="rec-label">${result.status}</div>`;
+                html += `<div>${isAnomaly ? '⚠️ Potential Issue Detected' : '✅ Looks Regular'}</div>`;
+                html += `</div>`;
+
+                html += `<table class="detail-table">`;
+                html += `<tr><th>Metrics</th><th>Value</th></tr>`;
+                html += `<tr><td>AI Predicted Fair Price</td><td>$${result.predicted_fare.toFixed(2)}</td></tr>`;
+                html += `<tr><td>User Input (Actual)</td><td>$${result.actual_fare.toFixed(2)}</td></tr>`;
+                html += `<tr><td>Difference</td><td style="color:${result.difference > 0 ? '#f44336' : '#4caf50'}">$${result.difference.toFixed(2)}</td></tr>`;
+                html += `<tr><td>Anomaly Score (Abs Diff)</td><td>${result.anomaly_score.toFixed(2)}</td></tr>`;
+                html += `<tr><td>Decision Threshold</td><td>$${result.metadata.threshold_used.toFixed(2)}</td></tr>`;
+                html += `</table>`;
+                
+                resultDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div style="color:red; padding:10px; border:1px solid red; border-radius:6px;">Error: ${error.message}</div>`;
             }
-
-        } catch (e) {
-            log.innerText = "Error: " + e.message;
-            alert("Failed to connect to API.");
         }
-    }
-</script>
+    </script>
 </body>
 </html>

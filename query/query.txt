@@ -1,0 +1,24 @@
+SELECT
+  -- Target Variable
+  total_amount,
+  -- Feature Variables
+  trip_distance,
+  EXTRACT(HOUR FROM pickup_datetime) AS pickup_hour,
+  EXTRACT(DAYOFWEEK FROM pickup_datetime) AS pickup_day,
+  passenger_count,
+  -- Pickup and dropoff location IDs
+  pickup_location_id,
+  dropoff_location_id,
+  rate_code,
+  payment_type
+FROM
+  `bigquery-public-data.new_york_taxi_trips.tlc_yellow_trips_2022`
+WHERE
+  -- Filter to train the model on "normal" transactions for anomaly detection baseline
+  total_amount BETWEEN 3.0 AND 200.0
+  AND trip_distance > 0.1
+  AND trip_distance < 50.0
+  AND passenger_count > 0
+-- Random sampling for training
+ORDER BY RAND()
+LIMIT 100000
