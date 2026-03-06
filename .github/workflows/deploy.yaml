@@ -38,7 +38,7 @@ jobs:
       - name: Submit Cloud Build
         run: |
           gcloud builds submit \
-            --no-source
+            --no-source \
             --config cloudbuild.yaml \
             --service-account="projects/${{ secrets.GCP_PROJECT_ID }}/serviceAccounts/${{ secrets.GCP_PROJECT_ID }}-dpl@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com" \
             --substitutions _IMAGE_NAME=${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_PROJECT_ID }}-acr/${{ secrets.GCP_PROJECT_ID }}-api:${{ github.sha }},_REPO_FULL_NAME=${{ github.repository }}

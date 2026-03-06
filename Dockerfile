@@ -1,23 +1,17 @@
-# 1. Use a lightweight Python base image
+# 1. Python 3.9の軽量版をベースにする
 FROM python:3.9-slim
 
-# 2. Set the working directory
+# 2. コンテナ内の作業ディレクトリを設定
 WORKDIR /app
 
-# --- MLOps Insight: Install OS-level dependencies for XGBoost ---
-# libgomp1 is required for OpenMP (multi-threading) in XGBoost
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
-
-# 3. Copy and install dependencies
+# 3. 依存関係ファイルをコピーしてインストール
+# (requirements.txt に pandas, fastapi, uvicorn, joblib, scikit-learn を書いている前提)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 4. Copy application files and the trained model
-# Ensure main.py and model.pkl (or model.bst) are in the same directory
+# 4. 全ファイル（main.py, .joblibファイルなど）をコピー
 COPY . .
 
-# 5. Run the application
-# Cloud Run expects the container to listen on the port defined by $PORT (default 8080)
+# 5. Cloud Runのポート(8080)に合わせて起動
+# main:app の 'main' は main.py のファイル名に対応
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
