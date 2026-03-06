@@ -1,86 +1,145 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-    <title>ML Prediction: Daily Max Temperature</title>
+    <title>FraudShield AI: Full Variable Simulator</title>
     <meta charset="utf-8">
     <style>
-        body { font-family: sans-serif; margin: 2em; }
-        .container { max-width: 500px; }
-        label { display: block; margin-top: 10px; }
-        input { width: 100%; padding: 5px; box-sizing: border-box; }
-        button { margin-top: 20px; padding: 10px; width: 100%; cursor: pointer; background-color: #3498db; color: white; border: none; border-radius: 4px; }
-        button:hover { background-color: #2980b9; }
-        #result { margin-top: 20px; font-weight: bold; color: #2c3e50; padding: 10px; border-radius: 4px; }
+        body { font-family: 'Consolas', 'Monaco', monospace; margin: 0; background-color: #0d1117; color: #c9d1d9; display: flex; flex-direction: column; height: 100vh; }
+        header { background: #161b22; padding: 15px 30px; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; }
+        .main-layout { display: flex; flex: 1; overflow: hidden; }
+        
+        /* Left: Control Panel */
+        .control-panel { width: 60%; padding: 20px; overflow-y: auto; border-right: 1px solid #30363d; }
+        .section-header { color: #58a6ff; font-size: 0.9em; margin: 20px 0 10px; border-bottom: 1px solid #30363d; padding-bottom: 5px; }
+        
+        /* Grid for V1-V28 */
+        .v-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .input-group { background: #161b22; padding: 8px; border-radius: 4px; border: 1px solid #30363d; }
+        label { display: block; font-size: 0.7em; color: #8b949e; margin-bottom: 4px; }
+        input { width: 100%; background: #0d1117; border: 1px solid #30363d; color: #58a6ff; padding: 4px; border-radius: 3px; font-size: 0.9em; }
+        input:focus { border-color: #58a6ff; outline: none; }
+
+        /* Right: Analysis Result */
+        .analysis-panel { width: 40%; padding: 30px; background: #0d1117; display: flex; flex-direction: column; }
+        .status-card { padding: 30px; border-radius: 12px; text-align: center; border: 2px solid #30363d; transition: all 0.5s; }
+        .safe { border-color: #238636; background: rgba(35, 134, 54, 0.1); color: #3fb950; }
+        .fraud { border-color: #f85149; background: rgba(248, 81, 73, 0.1); color: #f85149; box-shadow: 0 0 20px rgba(248, 81, 73, 0.2); }
+        
+        button { background: #238636; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1.1em; margin-top: 20px; transition: 0.2s; }
+        button:hover { background: #2ea043; }
+        
+        .score-display { font-size: 4em; font-weight: bold; margin: 10px 0; }
+        .metadata-log { margin-top: auto; font-size: 0.8em; color: #8b949e; background: #161b22; padding: 15px; border-radius: 6px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2 style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color:#2c3e509f;">
-            ML Prediction: <span style="font-size: 0.8em; color: #e98e10f1;">Daily Max Temperature Forecast</span>
-            明日は暑い？寒い？
-        </h2>
-        
-        <p>Enter weather data to predict tomorrow's maximum temperature.</p>
 
-        <label for="month">Month (1-12):</label>
-        <input type="number" id="month" value="6" min="1" max="12">
+<header>
+    <div style="font-size: 1.2em; font-weight: bold; color: #f85149;">🚨 FraudShield AI Simulator</div>
+    <div style="font-size: 0.8em; color: #8b949e;">Endpoint: ml-test041-api...</div>
+</header>
 
-        <label for="lag1">Max Temp 1 day ago (℃):昨日の最高気温</label>
-        <input type="number" step="0.1" id="lag1" value="20.0">
+<div class="main-layout">
+    <div class="control-panel">
+        <div class="section-header">BASIC TRANSACTION DATA</div>
+        <div class="v-grid" style="grid-template-columns: 1fr 1fr;">
+            <div class="input-group">
+                <label>TIME (Seconds)</label>
+                <input type="number" id="Time" value="406">
+            </div>
+            <div class="input-group">
+                <label>AMOUNT ($)</label>
+                <input type="number" id="Amount" value="80.00">
+            </div>
+        </div>
 
-        <label for="lag2">Max Temp 2 days ago (℃):一昨日の最高気温</label>
-        <input type="number" step="0.1" id="lag2" value="21.0">
-
-        <label for="lag3">Max Temp 3 days ago (℃):３日前の最高気温</label>
-        <input type="number" step="0.1" id="lag3" value="22.0">
-
-        <button onclick="predict()">Predict Tomorrow's Max Temperature: さて、明日の最高気温は？</button>
-
-        <div id="result"></div>
+        <div class="section-header">PCA COMPONENTS (V1 - V28)</div>
+        <div class="v-grid" id="v-inputs-container">
+            </div>
     </div>
 
-    <script>
-        async function predict() {
-            const resultDiv = document.getElementById('result');
-            // Provided Cloud Run URL
-            const url = "https://ml-test011-api-958231434949.asia-northeast1.run.app/predict";
-        
-            resultDiv.innerText = "⏳ Processing prediction...";
-            resultDiv.style.color = "#2c3e50";
-            resultDiv.style.backgroundColor = "#f8f9fa";
-        
-            // Construct data based on main.py's PredictionInput schema
-            const data = {
-                month: parseInt(document.getElementById('month').value),
-                lag1: parseFloat(document.getElementById('lag1').value),
-                lag2: parseFloat(document.getElementById('lag2').value),
-                lag3: parseFloat(document.getElementById('lag3').value)
-            };
+    <div class="analysis-panel">
+        <div id="status-card" class="status-card safe">
+            <div id="status-label" style="font-size: 1.2em;">READY FOR ANALYSIS</div>
+            <div id="score-val" class="score-display">--%</div>
+            <div id="status-desc">Click "Run Inference" to analyze.</div>
+        </div>
 
-            try {
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
+        <button onclick="predict()">RUN INFERENCE</button>
 
-                if (!res.ok) {
-                    throw new Error(`API Error: ${res.status} ${res.statusText}`);
-                }
-        
-                const result = await res.json();
-        
-                // Display result using the generic key 'prediction_result' defined in main.py
-                resultDiv.innerText = "✅ Predicted Max Temp: " + result.prediction_result.toFixed(1) + " ℃";
-                resultDiv.style.backgroundColor = "#e8f5e9";
+        <div class="metadata-log">
+            <strong>System Logs:</strong><br>
+            <div id="log-content">Waiting for request...</div>
+        </div>
+    </div>
+</div>
 
-            } catch (error) {
-                console.error("Error details:", error);
-                resultDiv.innerText = "An error occurred: " + error.message;
-                resultDiv.style.color = "red";
-                resultDiv.style.backgroundColor = "#ffebee";
-            }
+<script>
+    // Generate V1 - V28 Input Fields
+    const container = document.getElementById('v-inputs-container');
+    for (let i = 1; i <= 28; i++) {
+        const div = document.createElement('div');
+        div.className = 'input-group';
+        div.innerHTML = `
+            <label>V${i}</label>
+            <input type="number" id="V${i}" step="0.0001" value="0.0000">
+        `;
+        container.appendChild(div);
+    }
+
+    // Default values for V1, V2 to show something interesting
+    document.getElementById('V1').value = "-2.31";
+    document.getElementById('V2').value = "1.65";
+
+    async function predict() {
+        const url = "https://ml-test041-api-102654040368.asia-northeast1.run.app/predict";
+        const log = document.getElementById('log-content');
+        const card = document.getElementById('status-card');
+        const scoreVal = document.getElementById('score-val');
+        const statusLabel = document.getElementById('status-label');
+        
+        log.innerText = "Sending request to Cloud Run...";
+
+        // Collect all V-features into an array (V3 to V28)
+        const v_features = [];
+        for (let i = 3; i <= 28; i++) {
+            v_features.push(parseFloat(document.getElementById(`V${i}`).value) || 0);
         }
-    </script>
+
+        const payload = {
+            Time: parseFloat(document.getElementById('Time').value) || 0,
+            V1: parseFloat(document.getElementById('V1').value) || 0,
+            V2: parseFloat(document.getElementById('V2').value) || 0,
+            V_features: v_features,
+            Amount: parseFloat(document.getElementById('Amount').value) || 0
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            const score = data.fraud_score * 100;
+            
+            scoreVal.innerText = score.toFixed(2) + "%";
+            log.innerText = `Success: ${JSON.stringify(data.metadata)}`;
+
+            if (data.is_fraud) {
+                card.className = "status-card fraud";
+                statusLabel.innerText = "FRAUD DETECTED";
+            } else {
+                card.className = "status-card safe";
+                statusLabel.innerText = "LEGITIMATE";
+            }
+
+        } catch (e) {
+            log.innerText = "Error: " + e.message;
+            alert("Failed to connect to API.");
+        }
+    }
+</script>
 </body>
 </html>
